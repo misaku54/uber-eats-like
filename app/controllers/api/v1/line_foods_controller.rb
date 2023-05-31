@@ -4,6 +4,23 @@ module Api
     class LineFoodsController < ApplicationController
       before_action :set_food, only: %i[create]
 
+      def index
+        line_foods = LineFood.active
+        if line_foods.exists?
+          render json: {
+            line_food_ids: line_foods.map { |line_food| line_food.id },
+            restaurant: line_foods[0].restaurant,
+            # ブロック内の式を計算後に加算されます。
+            count: line_foods.sum { |line_food| line_food[:count] },
+            amount: line_foods.sum { |line_food| line_food.total_amount },
+          }, status: :ok
+        else
+          # 空データとstatus: :no_contentを返すことにします。
+          # ステータスコードは「リクエストは成功したが、空データ」として204を返す
+          render json: {}, status: :no_content
+        end
+      end
+
       def create
         # 現在の仮オーダーの中に、追加オーダーの食品の店舗ではない店舗のオーダーがあるか
         if LineFood.active.other_restaurant(@ordered_food.restaurant.id).exists?
