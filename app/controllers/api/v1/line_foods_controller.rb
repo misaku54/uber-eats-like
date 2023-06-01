@@ -2,7 +2,7 @@
 module Api
   module V1
     class LineFoodsController < ApplicationController
-      before_action :set_food, only: %i[create]
+      before_action :set_food, only: %i[create replace]
 
       def index
         line_foods = LineFood.active
@@ -22,9 +22,9 @@ module Api
       end
 
       def create
-        # 現在の仮オーダーの中に、追加オーダーの食品の店舗ではない店舗のオーダーがあるか
+        # 現在の仮注文の中に、追加注文の食品の店舗ではない店舗の注文があるか
         if LineFood.active.other_restaurant(@ordered_food.restaurant.id).exists?
-          # あれば、その店舗の名前と現在の店舗の名前と406 Not Acceptableをリターンする。
+          # あれば、その店舗の名前と追加注文の店舗の名前を406 Not Acceptableでリターンする。
           return render json: {
             existing_restaurant: LineFood.other_restaurant(@ordered_food.restaurant.id).first.restaurant.name,
             new_restaurant: Food.find(params[:food_id]).restaurant.name,
@@ -43,14 +43,33 @@ module Api
         end
       end
 
+      # 既にある古い仮注文を論理削除(activeというカラムにfalseを入れるなどして、
+      # データを非活性の状態にすること)し、新しいレコードを作成する
+      def replace
+        LineFood.active.other_restaurant(@ordered_food.restaurant.id).each do |line_food|
+          line_food.update_attribute(:active, false)
+        end
+
+        set_line_food(@ordered_food)
+
+        if @line_food.save
+          render json: {
+            line_food: @line_food
+          }, status: :created
+        else
+          render json: {}, status: :internal_server_error
+        end
+      end
+
       private
 
       def set_food
         @ordered_food = Food.find(params[:food_id])
       end
 
-      # すでに同じ食品に対して仮注文をしていれば、その仮注文レコードの個数に今回分を追加する。
+      # 引数で受け取った食品を仮注文しているか確認
       def set_line_food(ordered_food)
+        # すでに仮注文していれば、
         if ordered_food.line_food.present?
           @line_food = ordered_food.line_food
           @line_food.attributes = {
