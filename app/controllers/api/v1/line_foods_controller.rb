@@ -46,6 +46,7 @@ module Api
       # 既にある古い仮注文を論理削除(activeというカラムにfalseを入れるなどして、
       # データを非活性の状態にすること)し、新しいレコードを作成する
       def replace
+        # 他の店舗のアクティブなレコードを論理削除していく。
         LineFood.active.other_restaurant(@ordered_food.restaurant.id).each do |line_food|
           line_food.update_attribute(:active, false)
         end
@@ -69,14 +70,14 @@ module Api
 
       # 引数で受け取った食品を仮注文しているか確認
       def set_line_food(ordered_food)
-        # すでに仮注文していれば、
+        # すでに仮注文していれば、その仮注文インスタンスを生成し、個数を追加する。
         if ordered_food.line_food.present?
           @line_food = ordered_food.line_food
           @line_food.attributes = {
             count: ordered_food.line_food.count + params[:count],
             active: true
           }
-        # 仮注文をしていなければ、仮注文レコードを作成する
+        # 仮注文をしていなければ、仮注文インスタンスを作成する
         else
           @line_food = ordered_food.build_line_food(
             count: params[:count],
