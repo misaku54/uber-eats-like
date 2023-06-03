@@ -1,7 +1,7 @@
-import logo from './logo.svg';
+// import logo from './logo.svg';
 import './App.css';
 import {
-  BrouserRouter as Router,
+  BrowserRouter as Router,
   Switch,
   Route,
 } from 'react-router-dom';
@@ -23,6 +23,13 @@ function App() {
         <Route exact path="/orders">
           <Orders />
         </Route>
+        <Route 
+          exact 
+          path="/restaurants/:restaurantsId/foods"
+          render={({match}) => 
+            <Foods match={match}/>
+          }
+        />
       </Switch>
     </Router>
   );
