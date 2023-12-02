@@ -1,1 +1,1 @@
-## spa学習
+## spa学習（Rails*React）
